@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>RoboForensic BLE Rover</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#161b22">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #0d1117;
+    color: white;
+    text-align: center;
+}
+
+header {
+    padding: 25px;
+    background: #161b22;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 28px;
+}
+
+header p {
+    color: #8b949e;
+}
+
+.container {
+    max-width: 500px;
+    margin: 30px auto;
+    padding: 20px;
+}
+
+.card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 18px;
+    padding: 25px;
+}
+
+button {
+    border: none;
+    border-radius: 14px;
+    padding: 20px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    background: #21262d;
+    color: white;
+}
+
+button:hover {
+    background: #30363d;
+}
+
+button:active {
+    transform: scale(0.95);
+}
+
+.connect {
+    width: 100%;
+    background: #238636;
+    margin-bottom: 25px;
+}
+
+.stop {
+    background: #da3633;
+}
+
+.controls {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.forward {
+    grid-column: 2;
+}
+
+.left {
+    grid-column: 1;
+}
+
+.stop {
+    grid-column: 2;
+}
+
+.right {
+    grid-column: 3;
+}
+
+.backward {
+    grid-column: 2;
+}
+
+.status {
+    margin: 20px 0;
+    padding: 15px;
+    background: #0d1117;
+    border-radius: 10px;
+}
+
+#status {
+    color: #58a6ff;
+    font-weight: bold;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+<h1>🤖 ROBOFORENSIC</h1>
+
+<p>Bluetooth Rover Control</p>
+<p style="margin: 5px 0 0 0;"><a href="index.html" style="color: #58a6ff; font-size: 13px; text-decoration: none;">🌐 Switch to Wi-Fi Control</a></p>
+
+</header>
+
+<div class="container">
+
+<div class="card">
+
+<button class="connect"
+        onclick="connectBluetooth()">
+
+🔵 CONNECT BLUETOOTH
+
+</button>
+
+<div class="status">
+
+Status:
+<span id="status">Disconnected</span>
+
+</div>
+
+<div class="controls">
+
+<button class="forward"
+        onclick="sendCommand('F')">
+
+⬆<br>
+FORWARD
+
+</button>
+
+<button class="left"
+        onclick="sendCommand('L')">
+
+⬅<br>
+LEFT
+
+</button>
+
+<button class="stop"
+        onclick="sendCommand('S')">
+
+⛔<br>
+STOP
+
+</button>
+
+<button class="right"
+        onclick="sendCommand('R')">
+
+➡<br>
+RIGHT
+
+</button>
+
+<button class="backward"
+        onclick="sendCommand('B')">
+
+⬇<br>
+BACKWARD
+
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const SERVICE_UUID =
+"4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+
+const CHARACTERISTIC_UUID =
+"beb5483e-36e1-4688-b7f5-ea07361b26a8";
+
+let device = null;
+let characteristic = null;
+
+async function connectBluetooth() {
+
+    try {
+
+        document.getElementById("status").innerText =
+            "Searching...";
+
+        device = await navigator.bluetooth.requestDevice({
+
+            filters: [
+                {
+                    name: "RoboForensic-Rover"
+                }
+            ],
+
+            optionalServices: [
+                SERVICE_UUID
+            ]
+
+        });
+
+        document.getElementById("status").innerText =
+            "Connecting...";
+
+        const server =
+            await device.gatt.connect();
+
+        const service =
+            await server.getPrimaryService(SERVICE_UUID);
+
+        characteristic =
+            await service.getCharacteristic(
+                CHARACTERISTIC_UUID
+            );
+
+        document.getElementById("status").innerText =
+            "Connected";
+
+        device.addEventListener(
+            "gattserverdisconnected",
+            disconnected
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+        document.getElementById("status").innerText =
+            "Connection failed";
+
+    }
+}
+
+function disconnected() {
+
+    characteristic = null;
+
+    document.getElementById("status").innerText =
+        "Disconnected";
+
+}
+
+async function sendCommand(command) {
+
+    if (!characteristic) {
+
+        alert("Connect Bluetooth first!");
+
+        return;
+
+    }
+
+    try {
+
+        const data =
+            new TextEncoder().encode(command);
+
+        await characteristic.writeValue(data);
+
+        document.getElementById("status").innerText =
+            "Command: " + command;
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+        document.getElementById("status").innerText =
+            "Command failed";
+
+    }
+}
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(console.error);
+    });
+}
+
+</script>
+
+</body>
+
+</html>

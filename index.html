@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>RoboForensic | Investigation OS</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header><h1>ROBOFORENSIC</h1><span>INVESTIGATION OS</span></header>
+  <div style="text-align: center; margin: 15px 0;">
+    <a href="bluetooth.html" style="display: inline-block; padding: 12px 24px; background: #238636; color: white; border-radius: 8px; text-decoration: none; font-weight: bold; font-family: sans-serif;">🔵 Switch to Bluetooth Control (BLE)</a>
+  </div>
+  <main>
+    <section class="card">
+      <h2>Command Center</h2>
+      <div class="controls">
+        <button onclick="send('F')">▲ Forward</button>
+        <button onclick="send('L')">◀ Left</button>
+        <button onclick="send('S')">■ Stop</button>
+        <button onclick="send('R')">Right ▶</button>
+        <button onclick="send('B')">▼ Backward</button>
+      </div>
+      <p id="status">Ready</p>
+    </section>
+    <section class="card">
+      <h2>Evidence Vault</h2>
+      <p>Evidence records will appear here after backend integration.</p>
+    </section>
+  </main>
+  <script src="js/app.js"></script>
+</body>
+</html>
