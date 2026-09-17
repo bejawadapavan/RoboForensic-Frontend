@@ -1,4 +1,4 @@
-const CACHE_NAME = 'roboforensic-ble-v1';
+const CACHE_NAME = 'roboforensic-ble-v2';
 const ASSETS = [
   './',
   './bluetooth.html',
@@ -29,9 +29,28 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Use Network-First for HTML documents to prevent mobile users from getting stuck with old cached versions
+  if (event.request.mode === 'navigate' || event.request.destination === 'document') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          return response;
+        })
+        .catch(() => caches.match(event.request).then((res) => res || caches.match('./bluetooth.html')))
+    );
+    return;
+  }
+
+  // Cache-First for static assets
   event.respondWith(
     caches.match(event.request).then((response) => {
-      return response || fetch(event.request).catch(() => caches.match('./bluetooth.html'));
+      return response || fetch(event.request).then((networkRes) => {
+        const clone = networkRes.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        return networkRes;
+      });
     })
   );
 });

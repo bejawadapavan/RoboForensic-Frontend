@@ -1,322 +1,953 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>RoboForensic BLE Rover</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="apple-touch-icon" href="icon-192.png">
 
-<meta charset="UTF-8">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
 
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0">
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #090d16;
+      color: #e6edf3;
+      text-align: center;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
 
-<title>RoboForensic BLE Rover</title>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#161b22">
-<link rel="apple-touch-icon" href="icon-192.png">
+    header {
+      padding: 16px;
+      background: #161b26;
+      border-bottom: 1px solid #30363d;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
 
-<style>
+    header h1 {
+      font-size: 24px;
+      letter-spacing: 1px;
+      color: #58a6ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
 
-* {
-    box-sizing: border-box;
-}
+    header p {
+      color: #8b949e;
+      font-size: 13px;
+      margin-top: 4px;
+    }
 
-body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: #0d1117;
-    color: white;
-    text-align: center;
-}
+    .top-links {
+      margin-top: 8px;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      font-size: 12px;
+    }
 
-header {
-    padding: 25px;
-    background: #161b22;
-}
+    .top-links a {
+      color: #58a6ff;
+      text-decoration: none;
+      padding: 4px 8px;
+      background: #21262d;
+      border-radius: 6px;
+    }
 
-header h1 {
-    margin: 0;
-    font-size: 28px;
-}
+    .container {
+      max-width: 480px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 16px;
+      flex: 1;
+    }
 
-header p {
-    color: #8b949e;
-}
+    /* Warning Banner */
+    .banner {
+      background: #2b1d0c;
+      border: 1px solid #d29922;
+      color: #e3b341;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.4;
+      text-align: left;
+      margin-bottom: 14px;
+      display: none;
+    }
 
-.container {
-    max-width: 500px;
-    margin: 30px auto;
-    padding: 20px;
-}
+    .banner.visible {
+      display: block;
+    }
 
-.card {
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 18px;
-    padding: 25px;
-}
+    .banner strong {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 4px;
+      color: #f0883e;
+    }
 
-button {
-    border: none;
-    border-radius: 14px;
-    padding: 20px;
-    font-size: 18px;
-    font-weight: bold;
-    cursor: pointer;
-    background: #21262d;
-    color: white;
-}
+    .banner a {
+      color: #58a6ff;
+      text-decoration: underline;
+    }
 
-button:hover {
-    background: #30363d;
-}
+    /* Connection Card */
+    .card {
+      background: #161b26;
+      border: 1px solid #30363d;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
 
-button:active {
-    transform: scale(0.95);
-}
+    .status-badge-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #0d1117;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid #21262d;
+      margin-bottom: 14px;
+    }
 
-.connect {
-    width: 100%;
-    background: #238636;
-    margin-bottom: 25px;
-}
+    .status-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
-.stop {
-    background: #da3633;
-}
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #f85149;
+      box-shadow: 0 0 8px #f85149;
+      transition: all 0.3s ease;
+    }
 
-.controls {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-}
+    .status-dot.connecting {
+      background: #d29922;
+      box-shadow: 0 0 10px #d29922;
+      animation: pulse 1s infinite alternate;
+    }
 
-.forward {
-    grid-column: 2;
-}
+    .status-dot.connected {
+      background: #2ea043;
+      box-shadow: 0 0 12px #2ea043;
+    }
 
-.left {
-    grid-column: 1;
-}
+    @keyframes pulse {
+      from { opacity: 0.4; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1.1); }
+    }
 
-.stop {
-    grid-column: 2;
-}
+    #status-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: #c9d1d9;
+    }
 
-.right {
-    grid-column: 3;
-}
+    #device-info {
+      font-size: 12px;
+      color: #8b949e;
+      text-align: right;
+      max-width: 180px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
-.backward {
-    grid-column: 2;
-}
+    /* Connect Buttons */
+    .btn-group-connect {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
 
-.status {
-    margin: 20px 0;
-    padding: 15px;
-    background: #0d1117;
-    border-radius: 10px;
-}
+    .btn-primary {
+      background: linear-gradient(135deg, #238636, #2ea043);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(35, 134, 54, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
 
-#status {
-    color: #58a6ff;
-    font-weight: bold;
-}
+    .btn-primary:active {
+      transform: scale(0.98);
+      filter: brightness(0.9);
+    }
 
-</style>
+    .btn-secondary {
+      background: #21262d;
+      color: #c9d1d9;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
 
+    .btn-secondary:active {
+      background: #30363d;
+    }
+
+    .btn-danger {
+      background: #da3633;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: none;
+      box-shadow: 0 4px 12px rgba(218, 54, 51, 0.4);
+    }
+
+    /* Mobile Checklist Accordion */
+    .checklist {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 12px;
+      color: #9ca3af;
+      margin-top: 10px;
+    }
+
+    .checklist-title {
+      font-weight: 700;
+      color: #60a5fa;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .checklist ul {
+      padding-left: 18px;
+      line-height: 1.5;
+    }
+
+    .checklist li strong {
+      color: #f3f4f6;
+    }
+
+    /* Drive Controls */
+    .drive-mode-toggle {
+      display: flex;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 3px;
+      margin-bottom: 14px;
+      gap: 4px;
+    }
+
+    .drive-mode-btn {
+      flex: 1;
+      padding: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      background: transparent;
+      color: #8b949e;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .drive-mode-btn.active {
+      background: #238636;
+      color: white;
+      box-shadow: 0 2px 8px rgba(35, 134, 54, 0.4);
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      max-width: 320px;
+      margin: 0 auto;
+    }
+
+    .ctrl-btn {
+      background: #21262d;
+      color: white;
+      border: 1px solid #30363d;
+      border-radius: 16px;
+      padding: 22px 10px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      touch-action: manipulation;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      transition: transform 0.08s, background 0.08s;
+    }
+
+    .ctrl-btn .icon {
+      font-size: 26px;
+      line-height: 1;
+    }
+
+    .ctrl-btn:active, .ctrl-btn.pressed {
+      transform: scale(0.92);
+      background: #388bfd;
+      border-color: #58a6ff;
+    }
+
+    .ctrl-btn.btn-stop {
+      background: #b62324;
+      border-color: #da3633;
+    }
+
+    .ctrl-btn.btn-stop:active, .ctrl-btn.btn-stop.pressed {
+      background: #f85149;
+    }
+
+    .forward { grid-column: 2; }
+    .left { grid-column: 1; }
+    .stop { grid-column: 2; }
+    .right { grid-column: 3; }
+    .backward { grid-column: 2; }
+
+    /* Diagnostic Console */
+    .console-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .console-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #58a6ff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-clear {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #8b949e;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    #console-box {
+      background: #090d16;
+      border: 1px solid #21262d;
+      border-radius: 10px;
+      padding: 10px;
+      height: 120px;
+      overflow-y: auto;
+      text-align: left;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.45;
+      color: #7ee787;
+    }
+
+    .log-err { color: #f85149; }
+    .log-warn { color: #e3b341; }
+    .log-info { color: #79c0ff; }
+    .log-success { color: #7ee787; }
+
+    /* Settings Details */
+    details {
+      text-align: left;
+      font-size: 12px;
+      color: #8b949e;
+      margin-top: 10px;
+    }
+
+    details summary {
+      cursor: pointer;
+      color: #58a6ff;
+      padding: 6px 0;
+    }
+
+    .settings-body {
+      background: #0d1117;
+      border: 1px solid #21262d;
+      border-radius: 10px;
+      padding: 12px;
+      margin-top: 6px;
+    }
+
+    .settings-body label {
+      display: block;
+      margin-bottom: 4px;
+      color: #c9d1d9;
+      font-weight: 600;
+    }
+
+    .settings-body input {
+      width: 100%;
+      padding: 6px 8px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      color: white;
+      font-family: monospace;
+      font-size: 11px;
+      margin-bottom: 8px;
+    }
+
+    footer {
+      padding: 12px;
+      font-size: 11px;
+      color: #484f58;
+    }
+  </style>
 </head>
 
 <body>
 
 <header>
-
-<h1>🤖 ROBOFORENSIC</h1>
-
-<p>Bluetooth Rover Control</p>
-<p style="margin: 5px 0 0 0;"><a href="index.html" style="color: #58a6ff; font-size: 13px; text-decoration: none;">🌐 Switch to Wi-Fi Control</a></p>
-
+  <h1>🤖 ROBOFORENSIC</h1>
+  <p>Investigation Rover &bull; BLE Web Controller</p>
+  <div class="top-links">
+    <a href="index.html">🌐 Switch to Wi-Fi Control</a>
+    <a href="#" onclick="forceReloadApp(); return false;">🔄 Clear Cache & Reload</a>
+  </div>
 </header>
 
 <div class="container">
 
-<div class="card">
+  <!-- Compatibility Alert Banner -->
+  <div id="compat-banner" class="banner">
+    <strong>⚠️ Bluetooth Incompatible Browser</strong>
+    <span id="compat-msg">Web Bluetooth is not supported on this browser.</span>
+  </div>
 
-<button class="connect"
-        onclick="connectBluetooth()">
+  <!-- Connection Panel -->
+  <div class="card">
+    <div class="status-badge-container">
+      <div class="status-left">
+        <div id="status-dot" class="status-dot"></div>
+        <span id="status-text">Disconnected</span>
+      </div>
+      <div id="device-info">No Rover Paired</div>
+    </div>
 
-🔵 CONNECT BLUETOOTH
+    <div class="btn-group-connect">
+      <!-- Universal Scan: Shows all BLE devices so rover is never hidden -->
+      <button id="btn-connect-all" class="btn-primary" onclick="connectBluetooth(false)">
+        <span>🔵</span> SCAN ALL BLE DEVICES (RECOMMENDED)
+      </button>
 
-</button>
+      <!-- Quick Filter Scan: Filters specifically for RoboForensic / ESP32 -->
+      <button id="btn-connect-filter" class="btn-secondary" onclick="connectBluetooth(true)">
+        <span>🎯</span> Quick Filter Scan (RoboForensic / ESP32)
+      </button>
 
-<div class="status">
+      <!-- Disconnect Button -->
+      <button id="btn-disconnect" class="btn-danger" onclick="disconnectDevice()">
+        ⛔ DISCONNECT ROVER
+      </button>
+    </div>
 
-Status:
-<span id="status">Disconnected</span>
+    <!-- Mobile Troubleshooting Checklist -->
+    <div class="checklist">
+      <div class="checklist-title">📱 Rover Not Showing on Phone? Check:</div>
+      <ul>
+        <li><strong>Android GPS:</strong> Turn <strong>Location (GPS) ON</strong> in phone settings. (Android blocks BLE scans without Location).</li>
+        <li><strong>Android Browser:</strong> Use <strong>Google Chrome</strong> or <strong>Edge</strong>.</li>
+        <li><strong>iPhone / iOS:</strong> Safari does NOT support BLE. Open in <strong>Bluefy Browser</strong> (free on App Store).</li>
+        <li><strong>ESP32 Rover:</strong> Ensure rover has power and is <strong>not connected</strong> to another phone or tab.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Drive Control Panel -->
+  <div class="card">
+    <div class="drive-mode-toggle">
+      <button id="mode-hold" class="drive-mode-btn active" onclick="setDriveMode('hold')">
+        🕹️ Hold to Drive (Release = Stop)
+      </button>
+      <button id="mode-tap" class="drive-mode-btn" onclick="setDriveMode('tap')">
+        👆 Tap Mode (Click to Send)
+      </button>
+    </div>
+
+    <div class="controls-grid">
+      <button class="ctrl-btn forward" data-cmd="F" id="btn-f">
+        <span class="icon">⬆</span>
+        <span>FORWARD</span>
+      </button>
+
+      <button class="ctrl-btn left" data-cmd="L" id="btn-l">
+        <span class="icon">⬅</span>
+        <span>LEFT</span>
+      </button>
+
+      <button class="ctrl-btn btn-stop stop" data-cmd="S" id="btn-s">
+        <span class="icon">⛔</span>
+        <span>STOP</span>
+      </button>
+
+      <button class="ctrl-btn right" data-cmd="R" id="btn-r">
+        <span class="icon">➡</span>
+        <span>RIGHT</span>
+      </button>
+
+      <button class="ctrl-btn backward" data-cmd="B" id="btn-b">
+        <span class="icon">⬇</span>
+        <span>BACKWARD</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Live Diagnostic Console -->
+  <div class="card">
+    <div class="console-header">
+      <div class="console-title">📟 Live Diagnostics Console</div>
+      <button class="btn-clear" onclick="clearLogs()">Clear</button>
+    </div>
+    <div id="console-box"></div>
+
+    <details>
+      <summary>⚙️ Advanced BLE UUID Settings</summary>
+      <div class="settings-body">
+        <label for="input-service">Service UUID:</label>
+        <input type="text" id="input-service" value="4fafc201-1fb5-459e-8fcc-c5c9c331914b">
+
+        <label for="input-char">Characteristic UUID:</label>
+        <input type="text" id="input-char" value="beb5483e-36e1-4688-b7f5-ea07361b26a8">
+
+        <button class="btn-secondary" style="width:100%;" onclick="resetUUIDs()">Restore Default UUIDs</button>
+      </div>
+    </details>
+  </div>
 
 </div>
 
-<div class="controls">
-
-<button class="forward"
-        onclick="sendCommand('F')">
-
-⬆<br>
-FORWARD
-
-</button>
-
-<button class="left"
-        onclick="sendCommand('L')">
-
-⬅<br>
-LEFT
-
-</button>
-
-<button class="stop"
-        onclick="sendCommand('S')">
-
-⛔<br>
-STOP
-
-</button>
-
-<button class="right"
-        onclick="sendCommand('R')">
-
-➡<br>
-RIGHT
-
-</button>
-
-<button class="backward"
-        onclick="sendCommand('B')">
-
-⬇<br>
-BACKWARD
-
-</button>
-
-</div>
-
-</div>
-
-</div>
+<footer>
+  RoboForensic Rover OS &bull; Web BLE v2.0 Universal
+</footer>
 
 <script>
+  // ==========================================
+  // CONFIGURATION & STATE
+  // ==========================================
+  const DEFAULT_SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+  const DEFAULT_CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
 
-const SERVICE_UUID =
-"4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+  let bleDevice = null;
+  let bleServer = null;
+  let bleCharacteristic = null;
+  let driveMode = 'hold'; // 'hold' or 'tap'
+  let isWriting = false;
 
-const CHARACTERISTIC_UUID =
-"beb5483e-36e1-4688-b7f5-ea07361b26a8";
+  // DOM Elements
+  const statusDot = document.getElementById("status-dot");
+  const statusText = document.getElementById("status-text");
+  const deviceInfo = document.getElementById("device-info");
+  const btnConnectAll = document.getElementById("btn-connect-all");
+  const btnConnectFilter = document.getElementById("btn-connect-filter");
+  const btnDisconnect = document.getElementById("btn-disconnect");
+  const consoleBox = document.getElementById("console-box");
+  const compatBanner = document.getElementById("compat-banner");
+  const compatMsg = document.getElementById("compat-msg");
+  const inputService = document.getElementById("input-service");
+  const inputChar = document.getElementById("input-char");
 
-let device = null;
-let characteristic = null;
+  // ==========================================
+  // LOGGING SYSTEM
+  // ==========================================
+  function log(msg, type = "info") {
+    const time = new Date().toLocaleTimeString();
+    const line = document.createElement("div");
+    line.className = `log-${type}`;
+    line.textContent = `[${time}] ${msg}`;
+    consoleBox.appendChild(line);
+    consoleBox.scrollTop = consoleBox.scrollHeight;
+    console.log(`[BLE] ${msg}`);
+  }
 
-async function connectBluetooth() {
+  function clearLogs() {
+    consoleBox.innerHTML = "";
+    log("Console cleared.");
+  }
+
+  // ==========================================
+  // ENVIRONMENT & BROWSER CHECKS
+  // ==========================================
+  function checkCompatibility() {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isAndroid = /Android/.test(navigator.userAgent);
+
+    if (!('bluetooth' in navigator)) {
+      compatBanner.classList.add("visible");
+      if (isIOS) {
+        compatMsg.innerHTML = "Apple iOS Safari does not support Web Bluetooth. Please install <a href='https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055' target='_blank'><strong>Bluefy Browser</strong></a> from the App Store and open this page there.";
+        log("iOS detected without Web Bluetooth support. Bluefy required.", "err");
+      } else {
+        compatMsg.innerHTML = "Web Bluetooth is not supported in this browser. Please use <strong>Google Chrome</strong> or <strong>Edge</strong> over HTTPS.";
+        log("Web Bluetooth not supported in current browser.", "err");
+      }
+      return false;
+    }
+
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+      compatBanner.classList.add("visible");
+      compatMsg.innerHTML = "Web Bluetooth requires a secure <strong>HTTPS</strong> connection.";
+      log("Insecure connection. Web Bluetooth requires HTTPS.", "err");
+      return false;
+    }
+
+    log("Browser supports Web Bluetooth API.", "success");
+    if (isAndroid) {
+      log("Android detected: Ensure Location/GPS is ON for BLE scanning.", "warn");
+    }
+    return true;
+  }
+
+  // ==========================================
+  // BLUETOOTH CONNECTION
+  // ==========================================
+  async function connectBluetooth(useFilters = false) {
+    if (!checkCompatibility()) {
+      alert("Web Bluetooth is not supported in this browser!\n\n• On iPhone: Open this in the 'Bluefy' app.\n• On Android: Open in Google Chrome with Location/GPS enabled.");
+      return;
+    }
+
+    const serviceUuid = (inputService.value.trim() || DEFAULT_SERVICE_UUID).toLowerCase();
+    const charUuid = (inputChar.value.trim() || DEFAULT_CHARACTERISTIC_UUID).toLowerCase();
+
+    updateStatus("connecting", "Searching...", "Scanning BLE");
+    log(useFilters ? "Starting filtered BLE scan..." : "Starting ALL-DEVICES BLE scan (rover will not be hidden)...");
 
     try {
+      let requestOptions = {};
 
-        document.getElementById("status").innerText =
-            "Searching...";
+      if (useFilters) {
+        // Broad filter so any rover or ESP32 variant matches
+        requestOptions = {
+          filters: [
+            { name: "RoboForensic-Rover" },
+            { name: "RoboForensic" },
+            { namePrefix: "Robo" },
+            { namePrefix: "ESP32" },
+            { namePrefix: "Rover" },
+            { services: [serviceUuid] }
+          ],
+          optionalServices: [serviceUuid]
+        };
+      } else {
+        // Universal scan: acceptAllDevices displays every BLE device in range
+        requestOptions = {
+          acceptAllDevices: true,
+          optionalServices: [serviceUuid]
+        };
+      }
 
-        device = await navigator.bluetooth.requestDevice({
+      log("Waiting for user to choose device in browser picker...");
+      bleDevice = await navigator.bluetooth.requestDevice(requestOptions);
 
-            filters: [
-                {
-                    name: "RoboForensic-Rover"
-                }
-            ],
+      const devName = bleDevice.name || "Unnamed Rover";
+      log(`Device selected: "${devName}" (${bleDevice.id.slice(0, 8)}...)`, "success");
+      deviceInfo.textContent = devName;
 
-            optionalServices: [
-                SERVICE_UUID
-            ]
+      bleDevice.addEventListener("gattserverdisconnected", onDisconnected);
 
-        });
+      updateStatus("connecting", "Connecting to GATT...", devName);
+      log("Connecting to GATT server...");
+      bleServer = await bleDevice.gatt.connect();
+      log("GATT server connected!", "success");
 
-        document.getElementById("status").innerText =
-            "Connecting...";
+      updateStatus("connecting", "Discovering Service...", devName);
+      log(`Looking for primary service: ${serviceUuid}`);
+      
+      let service;
+      try {
+        service = await bleServer.getPrimaryService(serviceUuid);
+        log("Primary service found!", "success");
+      } catch (srvErr) {
+        log(`Primary service ${serviceUuid} not found directly. Attempting service search...`, "warn");
+        const services = await bleServer.getPrimaryServices();
+        log(`Found ${services.length} services on device.`, "info");
+        service = services[0];
+      }
 
-        const server =
-            await device.gatt.connect();
+      if (!service) {
+        throw new Error("Target BLE Service could not be found on device.");
+      }
 
-        const service =
-            await server.getPrimaryService(SERVICE_UUID);
+      updateStatus("connecting", "Getting Characteristic...", devName);
+      log(`Looking for characteristic: ${charUuid}`);
+      
+      try {
+        bleCharacteristic = await service.getCharacteristic(charUuid);
+        log("Characteristic found!", "success");
+      } catch (charErr) {
+        log(`Characteristic not found by UUID. Scanning characteristics...`, "warn");
+        const chars = await service.getCharacteristics();
+        bleCharacteristic = chars[0];
+        log(`Using characteristic: ${bleCharacteristic.uuid}`, "info");
+      }
 
-        characteristic =
-            await service.getCharacteristic(
-                CHARACTERISTIC_UUID
-            );
+      // Successfully connected
+      updateStatus("connected", "Connected", devName);
+      btnConnectAll.style.display = "none";
+      btnConnectFilter.style.display = "none";
+      btnDisconnect.style.display = "block";
+      log(`🚀 Rover connected and ready! Control via D-pad or keyboard.`, "success");
 
-        document.getElementById("status").innerText =
-            "Connected";
+      // Provide vibration feedback if supported
+      if ('vibrate' in navigator) navigator.vibrate(100);
 
-        device.addEventListener(
-            "gattserverdisconnected",
-            disconnected
-        );
+    } catch (err) {
+      console.error(err);
+      if (err.name === 'NotFoundError') {
+        log("Scan cancelled by user (or no device selected).", "warn");
+        updateStatus("disconnected", "Scan Cancelled", "None");
+      } else {
+        log(`Connection error: ${err.message}`, "err");
+        updateStatus("disconnected", "Connection Failed", "Error");
+        alert(`Bluetooth Error: ${err.message}\n\nTips:\n1. Ensure Android Location/GPS is ON\n2. Rover is powered on and not connected elsewhere\n3. Restart Rover & phone Bluetooth if needed`);
+      }
+      resetState();
+    }
+  }
 
+  function onDisconnected() {
+    log("⚠️ Rover disconnected from GATT server.", "warn");
+    updateStatus("disconnected", "Disconnected", "Lost Connection");
+    resetState();
+  }
+
+  function disconnectDevice() {
+    if (bleDevice && bleDevice.gatt.connected) {
+      log("Disconnecting rover upon user request...");
+      bleDevice.gatt.disconnect();
+    }
+    resetState();
+  }
+
+  function resetState() {
+    bleDevice = null;
+    bleServer = null;
+    bleCharacteristic = null;
+    btnConnectAll.style.display = "flex";
+    btnConnectFilter.style.display = "flex";
+    btnDisconnect.style.display = "none";
+    updateStatus("disconnected", "Disconnected", "No Rover Paired");
+  }
+
+  function updateStatus(state, text, dev) {
+    statusDot.className = "status-dot " + (state === "connecting" ? "connecting" : state === "connected" ? "connected" : "");
+    statusText.textContent = text;
+    if (dev) deviceInfo.textContent = dev;
+  }
+
+  // ==========================================
+  // COMMAND TRANSMISSION (F, B, L, R, S)
+  // ==========================================
+  async function sendCommand(cmd) {
+    if (!bleCharacteristic) {
+      log(`Cannot send '${cmd}': Rover not connected!`, "warn");
+      return;
     }
 
-    catch (error) {
-
-        console.error(error);
-
-        document.getElementById("status").innerText =
-            "Connection failed";
-
-    }
-}
-
-function disconnected() {
-
-    characteristic = null;
-
-    document.getElementById("status").innerText =
-        "Disconnected";
-
-}
-
-async function sendCommand(command) {
-
-    if (!characteristic) {
-
-        alert("Connect Bluetooth first!");
-
-        return;
-
+    if (isWriting) {
+      return; // Skip if busy sending previous frame
     }
 
+    isWriting = true;
     try {
+      const data = new TextEncoder().encode(cmd);
 
-        const data =
-            new TextEncoder().encode(command);
+      // Support writeWithoutResponse (fastest & standard for RC rovers) or writeWithResponse
+      if (bleCharacteristic.writeValueWithoutResponse) {
+        await bleCharacteristic.writeValueWithoutResponse(data);
+      } else if (bleCharacteristic.writeValueWithResponse) {
+        await bleCharacteristic.writeValueWithResponse(data);
+      } else {
+        await bleCharacteristic.writeValue(data);
+      }
 
-        await characteristic.writeValue(data);
+      log(`📤 Sent command: '${cmd}'`, "info");
 
-        document.getElementById("status").innerText =
-            "Command: " + command;
+      if ('vibrate' in navigator) navigator.vibrate(30);
 
+    } catch (err) {
+      log(`Failed sending '${cmd}': ${err.message}`, "err");
+    } finally {
+      isWriting = false;
     }
+  }
 
-    catch (error) {
+  // ==========================================
+  // DRIVE MODES & TOUCH / POINTER HANDLERS
+  // ==========================================
+  function setDriveMode(mode) {
+    driveMode = mode;
+    document.getElementById("mode-hold").classList.toggle("active", mode === 'hold');
+    document.getElementById("mode-tap").classList.toggle("active", mode === 'tap');
+    log(`Drive mode switched to: ${mode === 'hold' ? 'Hold to Drive' : 'Tap Mode'}`);
+  }
 
-        console.error(error);
+  const ctrlButtons = document.querySelectorAll(".ctrl-btn");
 
-        document.getElementById("status").innerText =
-            "Command failed";
+  ctrlButtons.forEach(btn => {
+    const cmd = btn.getAttribute("data-cmd");
 
-    }
-}
-
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(console.error);
+    // Pointer events handle both touch and mouse uniformly
+    btn.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      btn.classList.add("pressed");
+      sendCommand(cmd);
     });
-}
 
+    btn.addEventListener("pointerup", (e) => {
+      e.preventDefault();
+      btn.classList.remove("pressed");
+      if (driveMode === 'hold' && cmd !== 'S') {
+        sendCommand('S'); // Safety stop on release
+      }
+    });
+
+    btn.addEventListener("pointerleave", (e) => {
+      if (btn.classList.contains("pressed")) {
+        btn.classList.remove("pressed");
+        if (driveMode === 'hold' && cmd !== 'S') {
+          sendCommand('S');
+        }
+      }
+    });
+
+    btn.addEventListener("pointercancel", () => {
+      btn.classList.remove("pressed");
+      if (driveMode === 'hold' && cmd !== 'S') {
+        sendCommand('S');
+      }
+    });
+  });
+
+  // Keyboard controls for desktop testing
+  window.addEventListener("keydown", (e) => {
+    if (e.repeat) return;
+    switch (e.key) {
+      case "ArrowUp":
+      case "w":
+      case "W":
+        document.getElementById("btn-f").classList.add("pressed");
+        sendCommand("F");
+        break;
+      case "ArrowDown":
+      case "s":
+      case "S":
+        document.getElementById("btn-b").classList.add("pressed");
+        sendCommand("B");
+        break;
+      case "ArrowLeft":
+      case "a":
+      case "A":
+        document.getElementById("btn-l").classList.add("pressed");
+        sendCommand("L");
+        break;
+      case "ArrowRight":
+      case "d":
+      case "D":
+        document.getElementById("btn-r").classList.add("pressed");
+        sendCommand("R");
+        break;
+      case " ":
+        document.getElementById("btn-s").classList.add("pressed");
+        sendCommand("S");
+        break;
+    }
+  });
+
+  window.addEventListener("keyup", (e) => {
+    ctrlButtons.forEach(b => b.classList.remove("pressed"));
+    if (driveMode === 'hold') {
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "w", "W", "s", "S", "a", "A", "d", "D"].includes(e.key)) {
+        sendCommand("S");
+      }
+    }
+  });
+
+  // ==========================================
+  // UTILITIES & CACHE BUSTING
+  // ==========================================
+  function resetUUIDs() {
+    inputService.value = DEFAULT_SERVICE_UUID;
+    inputChar.value = DEFAULT_CHARACTERISTIC_UUID;
+    log("Reset UUIDs to factory defaults.");
+  }
+
+  async function forceReloadApp() {
+    log("Clearing Service Worker caches...");
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (let reg of registrations) {
+        await reg.unregister();
+      }
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      for (let key of keys) {
+        await caches.delete(key);
+      }
+    }
+    log("Cache cleared. Reloading page...");
+    window.location.reload(true);
+  }
+
+  // Register Service Worker
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(console.error);
+    });
+  }
+
+  // Initialize compatibility check on startup
+  window.addEventListener("DOMContentLoaded", () => {
+    checkCompatibility();
+  });
 </script>
 
 </body>
-
 </html>
